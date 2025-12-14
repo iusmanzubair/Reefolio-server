@@ -10,5 +10,6 @@ Route::get('/', function () {
 
 Route::post('/api/extract-report-gemini', [ReportController::class, 'extract']);
 Route::get('/api/fetch-themes', [TemplateController::class, 'fetchThemes']);
+Route::post('/api/create-portfolio', [TemplateController::class, 'createPortfolio']);
 
 require __DIR__.'/auth.php';
