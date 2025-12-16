@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Portfolio;
 use App\Models\Template;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PortfolioController extends Controller
 {
@@ -13,8 +15,9 @@ class PortfolioController extends Controller
 			$templateName = $request->input("templateName");	
 			$customBodyResume = $request->input("customBodyResume");	
 
-			$template = Template::where("name", $templateName)->select("defaultContent")->first();
-			if(!$template || !$template->defaultContent) {
+			$template = Template::where("name", $templateName)->select("default_content")->first();
+			Log::info($template->default_content);
+			if(!$template || !$template->default_content) {
 				return response()->json([
 					"message" => "Template not found"
 				], 404);
@@ -22,7 +25,7 @@ class PortfolioController extends Controller
 
 			$content = null;
 			if($customBodyResume) {
-				$templateContent = is_string($template->defaultContent) ? json_decode($template->defaultContent, true) : $template->defaultContent;
+				$templateContent = is_string($template->default_content) ? json_decode($template->default_content, true) : $template->default_content;
 				$customContent = json_decode($customBodyResume, true);
 				$customSectionMap = [];
 
@@ -39,25 +42,107 @@ class PortfolioController extends Controller
 					$customSection = $customSectionMap[$section["type"]] ?? null;
 
 					if($customSection) {
-						$mergeData = json_decode(json_encode($section["data"]), true);
+						$mergedData = json_decode(json_encode($section["data"]), true);
 						foreach($customSection["data"] as $key => $customValue) {
 							$templateValue = $section["data"][$key] ?? null;
 							
 							if(is_array($customValue)) {
-								$mergeData[$key] = $customValue;
+								$mergedData[$key] = $customValue;
 							}
 							else if(is_array($templateValue) && is_array($customValue)) {
-								$mergeData[$key] = array_map(function ($item, $index) use ($customValue) {
+								$mergedData[$key] = array_map(function ($item, $index) use ($customValue) {
 									return array_merge($item, $customValue[$index]) ?? [];
 								}, $templateValue, array_keys($templateValue));
 							}
+							else if(is_array($customValue)) {
+								$mergedData[$key] = array_merge($templateValue ?? [], $customValue);
+							}
+							else {
+								$mergedData[$key] = $customValue;
+							}
 						}
+
+						Log::info("section: ", $section);
+
+						return array_merge($section, [
+							"data" => $mergedData,
+							"sectionTitle" => isset($section["sectionTitle"]) ? $section["sectionTitle"] : "",
+							"sectionDescription" => isset($section["sectionDescription"]) ? $section["sectionDescription"] : ""
+						]);
 					}
+
+					return $section;
 				}, $templateContent["sections"]);
+
+				$content = $newContent;
 			}
+			else {
+				$content = $template->default_content;
+			}
+
+			Log::info("Content: ", $content);
+
+			$maps = [
+				"NeoSpark" => [
+					"themeName" => "SparklyGreen",
+					"fontName" => "Raleway"
+				],
+				"MonoEdge" => [
+					"themeName" => "simpleBlack",
+					"fontName" => "Raleway"
+				],
+				"LumenFlow" => [
+					"themeName" => "SunsetOcean",
+					"fontName" => "Raleway"
+				],
+			];
+
+			$newTemplate = Portfolio::create([
+				"is_template" => false,
+				"user_id" => $userId,
+				"content" => json_encode($content),
+				"is_published" => false,
+				"template_name" => $templateName,
+				"font_name" => $maps[$templateName]["fontName"] ?? null,
+				"theme_name" => $maps[$templateName]["themeName"] ?? null 
+			]);
+
+			return response()->json([
+				"data" => $newTemplate
+			], 200);
     }
     catch (\Throwable $e) {
-            
+      Log::error("Failed to create portfolio", [
+				"error" => $e->getMessage()
+			]);
+
+			return response()->json([
+				"message" => "Failed to create portfolio"
+			], 500);
     }
   }
+
+	public function fetchPortfolio(Request $request) {
+		try {
+			$portfolioId = $request->query("pid");
+			$portfolio = Portfolio::where("id", $portfolioId)->first();
+			
+			if(!$portfolio) {
+				return response()->json([
+					"message" => "Portfolio not found"
+				], 404);
+			}
+
+			Log::info($portfolio);
+
+			return response()->json([
+				"data" => $portfolio->content
+			], 200);
+		}
+		catch (\Throwable $e) {
+			Log::error("Error fetching portfolio: ", [
+				"error" => $e->getMessage()
+			]);
+		}
+	}
 }

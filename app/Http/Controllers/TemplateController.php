@@ -22,8 +22,6 @@ class TemplateController extends Controller
         return $order[$theme->name] ?? 999; 
       })->values();
 
-      Log::info($orderedThemes->toArray());
-
       return response()->json([
       	"data" => $orderedThemes
       ], 200);

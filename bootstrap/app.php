@@ -25,6 +25,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->validateCsrfTokens(
+            except: [
+                'api/*',  // Add this to exclude API routes
+                'api/extract-report-gemni', // Or your specific route
+            ]
+        );
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
