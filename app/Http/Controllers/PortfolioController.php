@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Portfolio;
 use App\Models\Template;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -15,18 +17,22 @@ class PortfolioController extends Controller
 			$templateName = $request->input("templateName");	
 			$customBodyResume = $request->input("customBodyResume");	
 
+			Logger($userId);
+			Logger($templateName);
+			Logger($customBodyResume);
+
 			$template = Template::where("name", $templateName)->select("default_content")->first();
-			Log::info($template->default_content);
 			if(!$template || !$template->default_content) {
 				return response()->json([
 					"message" => "Template not found"
 				], 404);
 			}
+			Log::info($template->default_content);
 
 			$content = null;
 			if($customBodyResume) {
 				$templateContent = is_string($template->default_content) ? json_decode($template->default_content, true) : $template->default_content;
-				$customContent = json_decode($customBodyResume, true);
+				$customContent = $customBodyResume;
 				$customSectionMap = [];
 
 				if(isset($customContent["sections"]) && is_array($customContent["sections"])) {
@@ -143,6 +149,32 @@ class PortfolioController extends Controller
 			Log::error("Error fetching portfolio: ", [
 				"error" => $e->getMessage()
 			]);
+		}
+	}
+
+	public function fetchPortfoliosByUserId(Request $request) {
+		try {
+			$authHeader = $request->header("Authorization");
+			$token = str_replace('Bearer ', '', $authHeader);
+
+			$secret = env("SUPABASE_JWT_SECRET");
+			$decoded = JWT::decode($token, new Key($secret, 'HS256'));
+			
+			$userId = $decoded->sub;
+			$portfolios = Portfolio::with("template")->where("user_id", $userId)->get();
+
+			return response()->json([
+				"portfolios" => $portfolios,
+			], 200);
+		}
+		catch (\Throwable $e) {
+			Log::error("Error fetching portfolios: ", [
+				"error" => $e->getMessage()
+			]);
+
+			return response()->json([
+				"message" => "Error fetching portfolios"
+			], 404);
 		}
 	}
 }

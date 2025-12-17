@@ -13,5 +13,6 @@ Route::post('/api/extract-report-gemini', [ReportController::class, 'extract']);
 Route::get('/api/fetch-themes', [TemplateController::class, 'fetchThemes']);
 Route::get('/api/fetch-portfolio', [PortfolioController::class, 'fetchPortfolio']);
 Route::post('/api/create-portfolio', [PortfolioController::class, 'createPortfolio']);
+Route::get('/api/fetch-portfolios-by-userid', [PortfolioController::class, 'fetchPortfoliosByUserId']);
 
 require __DIR__.'/auth.php';
