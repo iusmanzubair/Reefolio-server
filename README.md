@@ -37,4 +37,4 @@ Reefolio is a web application that automatically converts an uploaded resume int
 
 ### 🔗 Frontend Client Code
 The user interface and client-side logic for this project are located in a separate repository. You can access it here:
-**[UK Frontend Repository](https://github.com/iusmanzubair/Reefolio)**
+**[Reefolio Frontend Repository](https://github.com/iusmanzubair/Reefolio)**
